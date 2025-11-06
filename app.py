@@ -227,7 +227,7 @@ class EditxTab:
                         type="filepath",
                         label="Input Audio",
                     )
-                    self.generated_text = gr.Textbox(label="Target Text", lines=1, max_lines=200, max_length=100)
+                    self.generated_text = gr.Textbox(label="Target Text", lines=1, max_lines=200, max_length=1000)
                 with gr.Column():
                     with gr.Row():
                         self.edit_type = gr.Dropdown(label="Task", choices=self.edit_type_list, value="clone")
