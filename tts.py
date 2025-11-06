@@ -193,7 +193,6 @@ class StepAudioTTS:
             )
             # Build instruction prefix based on edit type
             instruct_prefix = self._build_audio_edit_instruction(audio_text, edit_type, edit_info, text)
-            print(f"instruct_prefix: {instruct_prefix}")
 
             # Encode the complete prompt to token sequence
             prompt_tokens = self._encode_audio_edit_prompt(
@@ -305,7 +304,6 @@ class StepAudioTTS:
             prompt_text=prompt_text,
             prompt_wav_tokens=prompt_wav_tokens
         )
-        print(f"edit clone prompt: {prompt}")
         sys_tokens = self.tokenizer.encode(f"system\n{prompt}")
 
         history = [1]
