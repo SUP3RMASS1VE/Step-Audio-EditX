@@ -15,7 +15,6 @@
 ## Introduction
 We are open-sourcing Step-Audio-EditX, a powerful LLM-based audio model specialized in expressive and iterative audio editing. It excels at editing emotion, speaking style, and paralinguistics, and also features robust zero-shot text-to-speech (TTS) capabilities. 
 
-
 ## 📑 Open-source Plan
 - [x] Inference Code
 - [x] Online demo (Gradio)
@@ -24,6 +23,27 @@ We are open-sourcing Step-Audio-EditX, a powerful LLM-based audio model speciali
   - [x] Step-Audio-Tokenizer
   - [ ] Step-Audio-EditX
   - [ ] Step-Audio-EditX-Int8
+- [ ] Training Code
+  - [ ] SFT training
+  - [ ] PPO training
+
+## Features
+- **Zero-Shot TTS**
+  - Excellent zero-shot TTS cloning for Mandarin, English, Sichuanese, and Cantonese.
+  - To use a dialect, just add a **[Cantonese]** or **[Sichuanese]** tag before your text.
+ 
+    
+- **Emotion and Speaking Style Editing**
+  - Remarkably effective iterative control over emotions and styles, supporting **dozens** of options for editing.
+    - Emotion Control : [ *Angry*, *Happy*, *Sad*, *Excited*, *Fearful*, *Surprised*, *Disgusted*, etc. ]
+    - Speaking Style Control: [ *Act_coy*, *Older*, *Child*, *Whisper*, *Serious*, *Generous*, *Exaggerated*, etc.]
+    - More emotional and stylistic controls are on the way. **Get Ready!** 🔥  
+    
+- **Paralinguistic Editing**:
+  -  Precise control over 10 types of paralinguistic features for more natural, human-like, and expressive synthetic audio.
+  - Supporting Tags:
+    - [ *Breathing*, *Laughter*, *Suprise-oh*, *Confirmation-en*, *Uhm*, *Suprise-ah*, *Suprise-wa*, *Sigh*, *Question-ei*, *Dissatisfaction-hnn* ]
+
   
 ## Model Download
 
