@@ -20,11 +20,11 @@ We are open-sourcing Step-Audio-EditX, a powerful LLM-based audio model speciali
 ## 📑 Open-source Plan
 - [x] Inference Code
 - [x] Online demo (Gradio)
-- [ ] Step-Audio-Edit-Benchmark
+- [ ] -Edit-Benchmark
 - [x] Model Checkpoints
-  - [x] Step-Audio-Tokenizer
-  - [x] Step-Audio-EditX
-  - [ ] Step-Audio-EditX-Int8
+  - [x] -Tokenizer
+  - [x] -EditX
+  - [ ] -EditX-Int8
 - [ ] Training Code
   - [ ] SFT training
   - [ ] PPO training
@@ -53,13 +53,13 @@ For more examples, see [demo page](https://stepaudiollm.github.io/step-audio-edi
 
 | Models   | 🤗 Hugging Face | ModelScope |
 |-------|-------|-------|
-| Step-Audio-EditX | [stepfun-ai/Step-Audio-EditX](https://huggingface.co/stepfun-ai/Step-Audio-EditX) | [stepfun-ai/Step-Audio-EditX](https://modelscope.cn/models/stepfun-ai/Step-Audio-EditX) |
-| Step-Audio-Tokenizer | [stepfun-ai/Step-Audio-Tokenizer](https://huggingface.co/stepfun-ai/Step-Audio-Tokenizer) | [stepfun-ai/Step-Audio-Tokenizer](https://modelscope.cn/models/stepfun-ai/Step-Audio-Tokenizer) |
+| -EditX | [stepfun-ai/-EditX](https://huggingface.co/stepfun-ai/-EditX) | [stepfun-ai/-EditX](https://modelscope.cn/models/stepfun-ai/-EditX) |
+| -Tokenizer | [stepfun-ai/-Tokenizer](https://huggingface.co/stepfun-ai/-Tokenizer) | [stepfun-ai/-Tokenizer](https://modelscope.cn/models/stepfun-ai/-Tokenizer) |
 
 
 ## Model Usage
 ### 📜 Requirements
-The following table shows the requirements for running Step-Audio model (batch size = 1):
+The following table shows the requirements for running Step-Audio-EditX model (batch size = 1):
 
 |     Model    |  Setting<br/>(sample frequency) | GPU Minimum Memory  |
 |------------|--------------------------------|----------------|
@@ -79,7 +79,7 @@ git clone https://github.com/stepfun-ai/Step-Audio-EditX.git
 conda create -n stepaudioedit python=3.10
 conda activate stepaudioedit
 
-cd Step-Audio
+cd Step-Audio-EditX
 pip install -r requirements.txt
 
 git lfs install
@@ -97,7 +97,7 @@ where_you_download_dir
 
 #### Run with Docker
 
-You can set up the environment required for running Step-Audio using the provided Dockerfile.
+You can set up the environment required for running Step-Audio-EditX using the provided Dockerfile.
 
 ```bash
 # build docker
