@@ -105,7 +105,7 @@ class UnifiedModelLoader:
         Prepare quantization configuration for model loading
 
         Args:
-            quantization_config: Quantization type ('int4', 'int8', or None)
+            quantization_config: Quantization type ('int4', 'int8', 'bnb-4bit-preloaded', or None)
             torch_dtype: PyTorch data type for compute operations
 
         Returns:
@@ -138,6 +138,7 @@ class UnifiedModelLoader:
                 bnb_4bit_quant_type="nf4",
                 bnb_4bit_compute_dtype=compute_dtype,
                 bnb_4bit_use_double_quant=True,
+                llm_int8_enable_fp32_cpu_offload=True,  # Enable CPU offloading for quantized model
             )
             return {
                 "quantization_config": bnb_config
@@ -154,6 +155,7 @@ class UnifiedModelLoader:
         model_path: str,
         source: str = ModelSource.AUTO,
         quantization_config: Optional[str] = None,
+        max_memory: Optional[dict] = None,
         **kwargs
     ) -> Tuple:
         """
@@ -187,6 +189,11 @@ class UnifiedModelLoader:
                     "local_files_only": True
                 }
 
+                # Add max_memory if specified (for CPU offloading)
+                if max_memory is not None:
+                    load_kwargs["max_memory"] = max_memory
+                    self.logger.info(f"🔧 Using max_memory limits: {max_memory}")
+
                 # Add quantization configuration if specified
                 load_kwargs.update(quantization_kwargs)
 
@@ -194,10 +201,26 @@ class UnifiedModelLoader:
                 if should_set_torch_dtype and kwargs.get("torch_dtype") is not None:
                     load_kwargs["torch_dtype"] = kwargs.get("torch_dtype")
                 
-                model = AutoModelForCausalLM.from_pretrained(
-                    os.path.join(model_path, quantization_config) if quantization_config == "awq-4bit" else model_path,
-                    **load_kwargs
-                )
+                # Try AutoModelForCausalLM first, fall back to AutoModel for custom architectures
+                from transformers import AutoModel
+                model_load_path = os.path.join(model_path, quantization_config) if quantization_config == "awq-4bit" else model_path
+                
+                try:
+                    model = AutoModelForCausalLM.from_pretrained(
+                        model_load_path,
+                        **load_kwargs
+                    )
+                except ValueError as e:
+                    # If AutoModelForCausalLM fails with unrecognized config, try AutoModel
+                    if "Unrecognized configuration class" in str(e):
+                        self.logger.info("Using AutoModel for custom model architecture")
+                        model = AutoModel.from_pretrained(
+                            model_load_path,
+                            **load_kwargs
+                        )
+                    else:
+                        raise
+                
                 tokenizer = AutoTokenizer.from_pretrained(
                     model_path,
                     trust_remote_code=True,

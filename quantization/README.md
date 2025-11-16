@@ -1,109 +1,128 @@
-# AWQ Quantization
+# Model Quantization Scripts
 
-This module provides AWQ (Activation-aware Weight Quantization) quantization using llmcompressor to compress language models while maintaining high inference quality.
+This directory contains multiple quantization scripts for the Step-Audio-EditX model. Due to the custom architecture, different quantization methods have varying levels of compatibility.
 
-## Overview
+## Available Methods
 
-AWQ is a post-training quantization method that reduces model size and improves inference speed by quantizing weights to lower precision while keeping activations at higher precision. This implementation supports various quantization schemes optimized for different use cases.
+### 1. BitsAndBytes (Recommended - Most Compatible)
+
+**Script:** `bnb_quantize.py`
+
+The most reliable method for custom architectures. Uses bitsandbytes library for 4-bit or 8-bit quantization.
+
+```bash
+# 4-bit quantization (recommended)
+python quantization/bnb_quantize.py --model_path models/Step-Audio-EditX/Step-Audio-EditX --bits 4
+
+# 8-bit quantization (higher quality, larger size)
+python quantization/bnb_quantize.py --model_path models/Step-Audio-EditX/Step-Audio-EditX --bits 8
+```
+
+**Pros:**
+- Works reliably with custom model architectures
+- Easy to use
+- Good compression ratio
+- Fast loading
+
+**Cons:**
+- Requires bitsandbytes library
+- Slightly lower quality than GPTQ/AWQ
+
+### 2. GPTQ (Alternative)
+
+**Script:** `gptq_quantize.py`
+
+Uses AutoGPTQ for quantization. May have compatibility issues with custom architectures.
+
+```bash
+python quantization/gptq_quantize.py --model_path models/Step-Audio-EditX/Step-Audio-EditX
+```
+
+**Pros:**
+- Better quality than bitsandbytes
+- Good compression
+
+**Cons:**
+- May not work with all custom architectures
+- Requires calibration dataset
+- Slower quantization process
+
+### 3. AWQ (Advanced - May Have Issues)
+
+**Script:** `awq_quantize.py`
+
+Uses llm-compressor for AWQ quantization. Currently has compatibility issues with the Step1 architecture due to torch.fx tracing limitations.
+
+```bash
+python quantization/awq_quantize.py --model_path models/Step-Audio-EditX/Step-Audio-EditX
+```
+
+**Known Issues:**
+- torch.fx cannot trace custom Step1 architecture
+- Fails during AWQ calibration phase
+- Not recommended for this model
 
 ## Installation
 
-Make sure you have installed the required dependencies:
+Install required packages:
 
 ```bash
-pip install -r requirements.txt
+# For BitsAndBytes (recommended)
+pip install bitsandbytes accelerate
+
+# For GPTQ
+pip install auto-gptq optimum
+
+# For AWQ (currently not working)
+pip install llmcompressor
 ```
 
-## Quick Start
+## Recommendation
 
-### Basic Usage
+**Use BitsAndBytes** (`bnb_quantize.py`) for the Step-Audio-EditX model. It's the most compatible with custom architectures and provides good results.
 
-Run AWQ quantization with minimal configuration:
+## Loading Quantized Models
 
-```bash
-python quantization/awq_quantize.py --model_path /path/to/your/model
+### BitsAndBytes:
+```python
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+
+config = BitsAndBytesConfig(load_in_4bit=True)
+model = AutoModelForCausalLM.from_pretrained(
+    "models/Step-Audio-EditX/Step-Audio-EditX/bnb-4bit",
+    quantization_config=config,
+    trust_remote_code=True,
+    device_map="auto"
+)
 ```
 
-This creates an `awq-4bit` subfolder within your model directory containing the quantized model, ready for inference.
+### GPTQ:
+```python
+from auto_gptq import AutoGPTQForCausalLM
 
-### Advanced Usage
-
-For more control over the quantization process:
-
-```bash
-python quantization/awq_quantize.py \
-    --model_path /path/to/your/model \
-    --output_suffix "awq-4bit" \
-    --group_size 128 \
-    --max_seq_length 4096 \
-    --num_calibration_samples 512 \
-    --dataset /path/to/your/calibration/dataset
+model = AutoGPTQForCausalLM.from_quantized(
+    "models/Step-Audio-EditX/Step-Audio-EditX/gptq-4bit",
+    trust_remote_code=True,
+    device_map="auto"
+)
 ```
-
-## Parameters
-
-| Parameter | Description | Default | Required |
-|-----------|-------------|---------|----------|
-| `--model_path` | Path to the model to quantize | - | Yes |
-| `--output_suffix` | Name of the output subfolder | `awq-4bit` | No |
-| `--scheme` | Quantization scheme (see below) | `W4A16_ASYM` | No |
-| `--group_size` | Quantization group size | `128` | No |
-| `--max_seq_length` | Maximum sequence length for calibration | `4096` | No |
-| `--num_calibration_samples` | Number of calibration samples | `512` | No |
-| `--dataset` | Custom calibration dataset path | `open_platypus` | No |
-| `--ignore_layers` | Layer names to ignore for quantization | `["lm_head"]` | No |
-| `--device` | Computing device (auto/cuda/cpu) | `auto` | No |
-| `--log_level` | Log level (DEBUG/INFO/WARNING/ERROR) | `INFO` | No |
-| `--dry_run` | Show config only, don't quantize | `False` | No |
-
-## Quantization Schemes
-
-| Scheme | Description | Use Case |
-|--------|-------------|----------|
-| **W4A16_ASYM** | 4-bit weights, 16-bit activations, asymmetric | **Recommended**: High compression with good quality |
-| **W4A16_SYM** | 4-bit weights, 16-bit activations, symmetric | Alternative 4-bit option |
-| **W8A16** | 8-bit weights, 16-bit activations | Conservative: Higher precision, larger size |
-
-## Output
-
-The script creates a quantized model in a subfolder within your specified model path:
-```
-/path/to/your/model/
-├── original_model_files...
-└── awq-4bit/  # or your custom suffix
-    ├── quantized_model_files...
-    └── quantization_config.json
-```
-
-The quantized model is immediately ready for inference and can be loaded using standard model loading procedures.
-
-## Requirements
-
-- Python 3.10+
-- Sufficient RAM for model loading
-- CUDA-compatible GPU (recommended for larger models)
-
-## Notes
-
-- Quantization time depends on model size and number of calibration samples
-- The calibration dataset significantly impacts quantization quality
-- Monitor GPU memory usage during quantization of large models
-- Use `--dry_run` to preview the quantization configuration before running
-- The `--ignore_layers` parameter helps preserve important layers like output heads
 
 ## Troubleshooting
 
-**Issue**: Out of memory errors during quantization
-**Solution**:
-- Reduce `--num_calibration_samples` (e.g., from 512 to 256)
-- Use `--device cpu` for CPU-only quantization (slower but uses less GPU memory)
-- Ensure sufficient system RAM is available
+### AWQ torch.fx tracing errors
+The AWQ method uses torch.fx to trace the model, which doesn't work well with custom architectures that have:
+- Custom attention mechanisms
+- Dynamic control flow
+- Custom operations
 
-**Issue**: Poor quality after quantization
-**Solution**:
-- Try using `W8A16` scheme for higher precision
-- Increase `--num_calibration_samples` for better calibration
-- Use a representative calibration dataset similar to your target use case
+**Solution:** Use BitsAndBytes instead.
 
-**Issue**: Specific layers causing issues
-**Solution**: Add problematic layer names to `--ignore_layers` to exclude them from quantization
+### Out of memory errors
+- Reduce `num_calibration_samples`
+- Use 8-bit instead of 4-bit
+- Ensure no other processes are using GPU memory
+
+### Model loading errors
+- Ensure `trust_remote_code=True` is set
+- Check that all model files are present
+- Verify CUDA is available for GPU quantization

@@ -63,7 +63,8 @@ class StepAudioTTS:
         tts_model_id=None,
         quantization_config=None,
         torch_dtype=torch.bfloat16,
-        device_map="cuda"
+        device_map="cuda",
+        max_memory=None
     ):
         """
         Initialize StepAudioTTS
@@ -76,6 +77,7 @@ class StepAudioTTS:
             quantization_config: Quantization configuration ('int4', 'int8', or None)
             torch_dtype: PyTorch data type for model weights (default: torch.bfloat16)
             device_map: Device mapping for model (default: "cuda")
+            max_memory: Max memory per device for offloading (dict, optional)
         """
         # Determine model ID or path to load
         if tts_model_id is None:
@@ -85,6 +87,8 @@ class StepAudioTTS:
         logger.info(f"   - model_source: {model_source}")
         logger.info(f"   - model_path: {model_path}")
         logger.info(f"   - tts_model_id: {tts_model_id}")
+        if max_memory:
+            logger.info(f"   - max_memory: {max_memory}")
 
         self.audio_tokenizer = audio_tokenizer
 
@@ -95,7 +99,8 @@ class StepAudioTTS:
                 source=model_source,
                 quantization_config=quantization_config,
                 torch_dtype=torch_dtype,
-                device_map=device_map
+                device_map=device_map,
+                max_memory=max_memory
             )
             logger.info(f"✅ Successfully loaded LLM and tokenizer: {tts_model_id}")
         except Exception as e:
@@ -148,6 +153,10 @@ class StepAudioTTS:
                 prompt_wav_tokens,
             )
 
+            # Clear CUDA cache before generation to free up memory
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            
             output_ids = self.llm.generate(
                 torch.tensor([token_ids]).to(torch.long).to("cuda"),
                 max_length=8192,
@@ -211,6 +220,10 @@ class StepAudioTTS:
             logger.debug(f"Edit instruction: {instruct_prefix}")
             logger.debug(f"Encoded prompt length: {len(prompt_tokens)}")
 
+            # Clear CUDA cache before generation to free up memory
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            
             output_ids = self.llm.generate(
                 torch.tensor([prompt_tokens]).to(torch.long).to("cuda"),
                 max_length=8192,

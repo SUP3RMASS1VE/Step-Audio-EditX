@@ -24,3 +24,7 @@ spaces==0.42.1
 matplotlib==3.10.7
 llmcompressor==0.7.0
 datasets==4.0.0
+bitsandbytes
+rotary_embedding_torch
+ffmpeg-python
+hdbscan
