@@ -4,6 +4,8 @@ import argparse
 import torch
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# Suppress verbose httpx logs
+logging.getLogger("httpx").setLevel(logging.WARNING)
 from datetime import datetime
 import torchaudio
 import librosa
@@ -354,7 +356,7 @@ if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Step-Audio Edit Demo")
     parser.add_argument("--model-path", type=str, default="./models/Step-Audio-EditX", help="Model path (default: ./models/Step-Audio-EditX)")
-    parser.add_argument("--server-name", type=str, default="0.0.0.0", help="Demo server name.")
+    parser.add_argument("--server-name", type=str, default="127.0.0.1", help="Demo server name.")
     parser.add_argument("--server-port", type=int, default=7860, help="Demo server port.")
     parser.add_argument("--tmp-dir", type=str, default="/tmp/gradio", help="Save path.")
     
@@ -794,8 +796,8 @@ if __name__ == "__main__":
         nested_tokenizer = os.path.join(args.model_path, "Step-Audio-Tokenizer")
         nested_tts = os.path.join(args.model_path, "Step-Audio-EditX")
         
+        # Check for nested structure first (recommended)
         if os.path.exists(nested_tokenizer) and os.path.exists(nested_tts):
-            # Correct nested structure (recommended)
             logger.info("Using nested directory structure")
             tokenizer_path = nested_tokenizer
             
@@ -818,11 +820,38 @@ if __name__ == "__main__":
             else:
                 tts_path = nested_tts
         else:
-            # Fallback for other structures
-            logger.warning("Expected directory structure not found")
-            logger.warning(f"Expected: {args.model_path}/Step-Audio-Tokenizer and {args.model_path}/Step-Audio-EditX")
-            logger.error("Please run with --auto-download to download the correct model structure")
-            exit(1)
+            # Check if models are in parent directory (sibling structure)
+            parent_dir = os.path.dirname(args.model_path)
+            sibling_tokenizer = os.path.join(parent_dir, "Step-Audio-Tokenizer")
+            sibling_tts = os.path.join(parent_dir, "Step-Audio-EditX")
+            
+            if os.path.exists(sibling_tokenizer) and os.path.exists(sibling_tts):
+                logger.info("Using sibling directory structure")
+                tokenizer_path = sibling_tokenizer
+                
+                # Handle different quantization types
+                if args.quantization == "awq-4bit":
+                    quantized_tts = os.path.join(sibling_tts, "awq-4bit")
+                    if os.path.exists(quantized_tts):
+                        tts_path = sibling_tts
+                        logger.info("Using AWQ quantized TTS model")
+                    else:
+                        tts_path = sibling_tts
+                        logger.warning("AWQ quantization requested but quantized model not found, using original")
+                        args.quantization = None
+                elif args.quantization == "bnb-4bit":
+                    tts_path = sibling_tts
+                    args.quantization = "int4"
+                    logger.info("Using BitsAndBytes 4-bit quantization (applied on load)")
+                else:
+                    tts_path = sibling_tts
+            else:
+                # No valid structure found
+                logger.warning("Expected directory structure not found")
+                logger.warning(f"Expected nested: {args.model_path}/Step-Audio-Tokenizer and {args.model_path}/Step-Audio-EditX")
+                logger.warning(f"Or sibling: {parent_dir}/Step-Audio-Tokenizer and {parent_dir}/Step-Audio-EditX")
+                logger.error("Please run with --auto-download to download the correct model structure")
+                exit(1)
         
         # Load StepAudioTokenizer
         encoder = StepAudioTokenizer(
