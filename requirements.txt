@@ -9,7 +9,6 @@ omegaconf==2.3.0
 librosa==0.10.2.post1
 sox==1.5.0
 modelscope
-numpy==2.2.6
 six==1.16.0
 hyperpyyaml
 conformer==0.3.2
@@ -28,3 +27,4 @@ bitsandbytes
 rotary_embedding_torch
 ffmpeg-python
 hdbscan
+tqdm
