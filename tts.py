@@ -9,6 +9,7 @@ import librosa
 import soundfile as sf
 from typing import Tuple, Optional
 from http import HTTPStatus
+from tqdm import tqdm
 
 import torchaudio
 
@@ -157,13 +158,30 @@ class StepAudioTTS:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
             
-            output_ids = self.llm.generate(
-                torch.tensor([token_ids]).to(torch.long).to("cuda"),
-                max_length=8192,
-                temperature=0.7,
-                do_sample=True,
-                logits_processor=LogitsProcessorList([RepetitionAwareLogitsProcessor()]),
-            )
+            # Generate with progress bar
+            from transformers import StoppingCriteria
+            
+            class ProgressCallback(StoppingCriteria):
+                def __init__(self, pbar):
+                    self.pbar = pbar
+                    self.last_len = 0
+                
+                def __call__(self, input_ids, scores, **kwargs):
+                    current_len = input_ids.shape[1]
+                    if current_len > self.last_len:
+                        self.pbar.update(current_len - self.last_len)
+                        self.last_len = current_len
+                    return False
+            
+            with tqdm(total=8192-len(token_ids), desc="Cloning voice", unit="token") as pbar:
+                output_ids = self.llm.generate(
+                    torch.tensor([token_ids]).to(torch.long).to("cuda"),
+                    max_length=8192,
+                    temperature=0.7,
+                    do_sample=True,
+                    logits_processor=LogitsProcessorList([RepetitionAwareLogitsProcessor()]),
+                    stopping_criteria=[ProgressCallback(pbar)]
+                )
             output_ids = output_ids[:, len(token_ids) : -1]  # skip eos token
             logger.debug("Voice cloning generation completed")
             vq0206_codes_vocoder = torch.tensor([vq0206_codes], dtype=torch.long) - 65536
@@ -224,13 +242,30 @@ class StepAudioTTS:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
             
-            output_ids = self.llm.generate(
-                torch.tensor([prompt_tokens]).to(torch.long).to("cuda"),
-                max_length=8192,
-                temperature=0.7,
-                do_sample=True,
-                logits_processor=LogitsProcessorList([RepetitionAwareLogitsProcessor()]),
-            )
+            # Generate with progress bar
+            from transformers import StoppingCriteria
+            
+            class ProgressCallback(StoppingCriteria):
+                def __init__(self, pbar):
+                    self.pbar = pbar
+                    self.last_len = 0
+                
+                def __call__(self, input_ids, scores, **kwargs):
+                    current_len = input_ids.shape[1]
+                    if current_len > self.last_len:
+                        self.pbar.update(current_len - self.last_len)
+                        self.last_len = current_len
+                    return False
+            
+            with tqdm(total=8192-len(prompt_tokens), desc="Editing audio", unit="token") as pbar:
+                output_ids = self.llm.generate(
+                    torch.tensor([prompt_tokens]).to(torch.long).to("cuda"),
+                    max_length=8192,
+                    temperature=0.7,
+                    do_sample=True,
+                    logits_processor=LogitsProcessorList([RepetitionAwareLogitsProcessor()]),
+                    stopping_criteria=[ProgressCallback(pbar)]
+                )
             output_ids = output_ids[:, len(prompt_tokens) : -1]  # skip eos token
             vq0206_codes_vocoder = torch.tensor([vq0206_codes], dtype=torch.long) - 65536
             logger.debug("Audio editing generation completed")
